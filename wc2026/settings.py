@@ -6,7 +6,7 @@ SECRET_KEY = "django-insecure-wc2026-dev-key-change-in-production"
 
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "kopamundial.pythonanywhere.com"]
 
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
