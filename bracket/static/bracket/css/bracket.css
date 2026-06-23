@@ -9,10 +9,16 @@
 
 body.bracket-page {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   background:
     linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92)),
     url("https://images.unsplash.com/photo-1574629810360-7abca95f4f85?auto=format&fit=crop&w=1600&q=80")
       center / cover no-repeat fixed;
+}
+
+.bracket-main {
+  flex: 1;
 }
 
 .round-labels {
@@ -277,4 +283,41 @@ body.bracket-page {
   .display-5 {
     font-size: 1.75rem;
   }
+}
+
+.site-footer {
+  margin-top: auto;
+  background: var(--bracket-header);
+  color: rgba(255, 255, 255, 0.85);
+  padding: 1.25rem 1rem;
+  text-align: center;
+}
+
+.site-footer-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.site-footer-title {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
+  color: #fff;
+}
+
+.site-footer-text {
+  font-size: 0.8rem;
+  margin-bottom: 0;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.site-footer a {
+  color: #ffc107;
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  text-decoration: underline;
 }

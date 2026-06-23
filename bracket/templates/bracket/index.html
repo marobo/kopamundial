@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="{% static 'bracket/css/bracket.css' %}">
 </head>
 <body class="bracket-page{% if user.is_staff %} admin-edit-mode{% endif %}">
-  <div class="container-fluid py-3 px-2 px-lg-4">
+  <div class="container-fluid bracket-main py-3 px-2 px-lg-4">
     <header class="text-center mb-3">
       <h1 class="display-5 fw-bold text-uppercase mb-1">World Cup 2026</h1>
       {% if user.is_staff %}
@@ -55,6 +55,16 @@
       </div>
     </div>
   </div>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <p class="site-footer-title">Kopa Mundial · FIFA World Cup 2026</p>
+      <p class="site-footer-text">
+        &copy; {% now "Y" %} Kopa Mundial — unofficial fan bracket.
+        Made with ⚽ by <a href="https://github.com/marobo" target="_blank">Marobo</a> on <a href="https://github.com/marobo/kopa-mundial" target="_blank">GitHub</a>.
+      </p>
+    </div>
+  </footer>
 
   <div class="modal fade" id="teamModal" tabindex="-1" aria-labelledby="teamModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable">
