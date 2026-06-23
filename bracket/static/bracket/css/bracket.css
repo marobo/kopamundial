@@ -22,10 +22,12 @@ body.bracket-page {
 }
 
 .round-labels {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr 0.8fr 0.6fr 0.7fr 0.6fr 0.8fr 1fr 1.4fr;
-  gap: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
   max-width: 1400px;
+  min-width: 1100px;
   margin: 0 auto 0.75rem;
   padding: 0.5rem 0.75rem;
   background: var(--bracket-header);
@@ -34,16 +36,53 @@ body.bracket-page {
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+.round-labels-half {
+  display: flex;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.round-labels-left {
+  justify-content: flex-end;
+}
+
+.round-labels-right {
+  justify-content: flex-start;
+}
+
+.round-labels-half span {
+  min-width: 130px;
   text-align: center;
 }
 
-.round-label-center {
+.round-labels-left span:first-child,
+.round-labels-right span:last-child {
+  min-width: 150px;
+}
+
+.round-labels-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 160px;
+  flex-shrink: 0;
+}
+
+.round-label-final {
   color: #ffc107;
+  text-align: center;
 }
 
 .bracket-scroll {
   overflow-x: auto;
   padding-bottom: 1rem;
+}
+
+.round-labels-scroll {
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
 }
 
 .bracket {
