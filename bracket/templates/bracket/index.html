@@ -11,7 +11,7 @@
 <body class="bracket-page{% if user.is_staff %} admin-edit-mode{% endif %}">
   <div class="container-fluid bracket-main py-3 px-2 px-lg-4">
     <header class="text-center mb-3">
-      <h1 class="display-5 fw-bold text-uppercase mb-1">World Cup 2026</h1>
+      <h4 class="fw-bold text-uppercase mb-1">World Cup 2026</h4>
       {% if user.is_staff %}
       <p class="text-muted mb-2">Admin edit mode — tap teams to assign or pick winners</p>
       <p class="mb-3">
@@ -19,7 +19,7 @@
         <a href="{% url 'admin:index' %}" class="btn btn-sm btn-outline-dark ms-2">Django Admin</a>
       </p>
       {% else %}
-      <p class="text-muted mb-3">Official knockout bracket</p>
+      <p class="text-muted mb-3">Unofficial World Cup 2026 knockout bracket</p>
       {% endif %}
     </header>
 
