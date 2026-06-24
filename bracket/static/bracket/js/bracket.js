@@ -1,8 +1,6 @@
 (function () {
   "use strict";
 
-  const STORAGE_KEY = "wc2026-bracket-v1";
-
   const ROUND_LABELS = {
     r32: "Round of 32",
     r16: "Round of 16",
@@ -13,67 +11,13 @@
 
   const LEFT_ROUNDS = ["r32", "r16", "qf", "sf"];
   const RIGHT_ROUNDS = ["sf", "qf", "r16", "r32"];
-
   const ROUND_COUNTS = { r32: 16, r16: 8, qf: 4, sf: 2, final: 1 };
 
-  const FEEDERS = buildFeeders();
-
-  const teams = JSON.parse(document.getElementById("teams-data").textContent);
-  const teamByCode = Object.fromEntries(teams.map((t) => [t.code, t]));
-
-  let state = loadState();
+  let state = { matches: {} };
+  let isStaff = false;
+  let teams = [];
   let pickTarget = null;
   let teamModal = null;
-
-  function buildFeeders() {
-    const feeders = {};
-
-    for (let i = 0; i < 8; i++) {
-      feeders[`r16-${i}`] = {
-        home: `r32-${i * 2}`,
-        away: `r32-${i * 2 + 1}`,
-      };
-    }
-
-    for (let i = 0; i < 4; i++) {
-      feeders[`qf-${i}`] = {
-        home: `r16-${i * 2}`,
-        away: `r16-${i * 2 + 1}`,
-      };
-    }
-
-    feeders["sf-0"] = { home: "qf-0", away: "qf-1" };
-    feeders["sf-1"] = { home: "qf-2", away: "qf-3" };
-    feeders.final = { home: "sf-0", away: "sf-1" };
-
-    return feeders;
-  }
-
-  function defaultState() {
-    const matches = {};
-    Object.keys(ROUND_COUNTS).forEach((round) => {
-      for (let i = 0; i < ROUND_COUNTS[round]; i++) {
-        const id = round === "final" ? "final" : `${round}-${i}`;
-        matches[id] = { home: null, away: null, winner: null };
-      }
-    });
-    return { matches };
-  }
-
-  function loadState() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return defaultState();
-      const parsed = JSON.parse(raw);
-      return parsed.matches ? parsed : defaultState();
-    } catch {
-      return defaultState();
-    }
-  }
-
-  function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }
 
   function flagCode(code) {
     const map = {
@@ -133,26 +77,22 @@
     return `https://flagcdn.com/w40/${flagCode(code)}.png`;
   }
 
+  function showError(message) {
+    const box = document.getElementById("bracket-error");
+    box.textContent = message;
+    box.classList.remove("d-none");
+  }
+
+  function hideError() {
+    document.getElementById("bracket-error").classList.add("d-none");
+  }
+
   function getWinnerTeam(matchId) {
     const match = state.matches[matchId];
     if (!match || !match.winner) return null;
-    return teamByCode[match.winner] || null;
-  }
-
-  function refreshBracketFromWinners() {
-    Object.entries(FEEDERS).forEach(([targetId, sources]) => {
-      const target = state.matches[targetId];
-      const newHome = getWinnerTeam(sources.home);
-      const newAway = getWinnerTeam(sources.away);
-      const homeChanged = (target.home?.code || null) !== (newHome?.code || null);
-      const awayChanged = (target.away?.code || null) !== (newAway?.code || null);
-
-      if (homeChanged || awayChanged) {
-        target.home = newHome;
-        target.away = newAway;
-        target.winner = null;
-      }
-    });
+    if (match.home?.code === match.winner) return match.home;
+    if (match.away?.code === match.winner) return match.away;
+    return null;
   }
 
   function getTeamsUsedInRound(roundPrefix) {
@@ -165,35 +105,45 @@
     return used;
   }
 
-  function assignTeam(matchId, slot, team) {
-    const match = state.matches[matchId];
-    const r32Used = getTeamsUsedInRound("r32");
-    const isDuplicate =
-      team &&
-      matchId.startsWith("r32") &&
-      r32Used.has(team.code) &&
-      match[slot]?.code !== team.code;
-    if (isDuplicate) return;
+  async function apiUpdateMatch(matchId, field, teamCode) {
+    const response = await fetch("/api/bracket/match/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": window.BRACKET_CSRF || "",
+      },
+      body: JSON.stringify({
+        match_id: matchId,
+        field,
+        team_code: teamCode,
+      }),
+    });
 
-    match[slot] = team;
-    match.winner = null;
-    saveState();
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Update failed");
+    }
+
+    state = data;
+    if (data.teams) teams = data.teams;
+    isStaff = data.is_staff;
+    hideError();
     renderAll();
   }
 
-  function pickWinner(matchId, slot) {
+  async function assignTeam(matchId, slot, team) {
+    await apiUpdateMatch(matchId, slot, team ? team.code : null);
+  }
+
+  async function pickWinner(matchId, slot) {
     const match = state.matches[matchId];
     const team = match[slot];
     if (!team || !match.home || !match.away) return;
-
-    match.winner = match.winner === team.code ? null : team.code;
-    refreshBracketFromWinners();
-    saveState();
-    renderAll();
+    await apiUpdateMatch(matchId, "winner", team.code);
   }
 
   function renderTeamRow(matchId, slot) {
-    const match = state.matches[matchId];
+    const match = state.matches[matchId] || {};
     const team = match[slot];
     const row = document.createElement("div");
     row.className = "team-row";
@@ -201,8 +151,9 @@
 
     if (!team) {
       row.classList.add("empty");
-      row.textContent = matchId.startsWith("r32") ? "Select team…" : "—";
-      if (matchId.startsWith("r32")) {
+      row.textContent =
+        isStaff && matchId.startsWith("r32") ? "Select team…" : "—";
+      if (isStaff && matchId.startsWith("r32")) {
         row.addEventListener("click", () => openTeamPicker(matchId, slot));
       }
       return row;
@@ -225,20 +176,22 @@
     row.appendChild(img);
     row.appendChild(name);
 
-    row.addEventListener("click", () => {
-      if (matchId.startsWith("r32") && (!match.home || !match.away)) {
-        openTeamPicker(matchId, slot);
-        return;
-      }
-      pickWinner(matchId, slot);
-    });
+    if (isStaff) {
+      row.addEventListener("click", () => {
+        if (matchId.startsWith("r32") && (!match.home || !match.away)) {
+          openTeamPicker(matchId, slot);
+          return;
+        }
+        pickWinner(matchId, slot).catch((err) => showError(err.message));
+      });
 
-    row.addEventListener("contextmenu", (event) => {
-      event.preventDefault();
-      if (matchId.startsWith("r32")) {
-        assignTeam(matchId, slot, null);
-      }
-    });
+      row.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        if (matchId.startsWith("r32")) {
+          assignTeam(matchId, slot, null).catch((err) => showError(err.message));
+        }
+      });
+    }
 
     return row;
   }
@@ -336,74 +289,58 @@
       ? state.matches[pickTarget.matchId]?.[pickTarget.slot]?.code
       : null;
 
-    const allMatching = teams.filter(
-      (team) =>
-        !q ||
-        team.name.toLowerCase().includes(q) ||
-        team.code.toLowerCase().includes(q)
-    );
+    teams
+      .filter(
+        (team) =>
+          !q ||
+          team.name.toLowerCase().includes(q) ||
+          team.code.toLowerCase().includes(q)
+      )
+      .forEach((team) => {
+        if (
+          pickTarget?.matchId.startsWith("r32") &&
+          r32Used.has(team.code) &&
+          team.code !== currentSlotCode
+        ) {
+          return;
+        }
 
-    allMatching.forEach((team) => {
-      if (
-        pickTarget?.matchId.startsWith("r32") &&
-        r32Used.has(team.code) &&
-        team.code !== currentSlotCode
-      ) {
-        return;
-      }
-
-      const item = document.createElement("button");
-      item.type = "button";
-      item.className =
-        "list-group-item list-group-item-action d-flex align-items-center gap-2";
-      item.innerHTML = `<img class="team-flag" src="${flagUrl(team.code)}" alt=""> <span>${team.name}</span>`;
-      item.addEventListener("click", () => {
-        assignTeam(pickTarget.matchId, pickTarget.slot, team);
-        teamModal.hide();
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className =
+          "list-group-item list-group-item-action d-flex align-items-center gap-2";
+        item.innerHTML = `<img class="team-flag" src="${flagUrl(team.code)}" alt=""> <span>${team.name}</span>`;
+        item.addEventListener("click", () => {
+          assignTeam(pickTarget.matchId, pickTarget.slot, team)
+            .then(() => teamModal.hide())
+            .catch((err) => showError(err.message));
+        });
+        list.appendChild(item);
       });
-      list.appendChild(item);
+  }
+
+  async function loadBracket() {
+    const response = await fetch("/api/bracket/");
+    if (!response.ok) {
+      throw new Error("Failed to load bracket");
+    }
+    const data = await response.json();
+    state = data;
+    isStaff = data.is_staff;
+    teams = data.teams || [];
+    hideError();
+    renderAll();
+  }
+
+  const modalEl = document.getElementById("teamModal");
+  if (modalEl) {
+    teamModal = new bootstrap.Modal(modalEl);
+    document.getElementById("team-search").addEventListener("input", (event) => {
+      renderTeamList(event.target.value);
     });
   }
 
-  function resetBracket() {
-    if (!confirm("Reset the entire bracket?")) return;
-    state = defaultState();
-    saveState();
-    renderAll();
-  }
-
-  function shuffle(array) {
-    const copy = array.slice();
-    for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-    }
-    return copy;
-  }
-
-  function fillRandomTeams() {
-    if (!confirm("Fill Round of 32 with random teams? This clears your bracket.")) return;
-
-    state = defaultState();
-    const picked = shuffle(teams).slice(0, 32);
-
-    for (let i = 0; i < 16; i++) {
-      state.matches[`r32-${i}`].home = picked[i * 2];
-      state.matches[`r32-${i}`].away = picked[i * 2 + 1];
-    }
-
-    saveState();
-    renderAll();
-  }
-
-  document.getElementById("btn-reset").addEventListener("click", resetBracket);
-  document.getElementById("btn-random").addEventListener("click", fillRandomTeams);
-  document.getElementById("team-search").addEventListener("input", (event) => {
-    renderTeamList(event.target.value);
+  loadBracket().catch(() => {
+    showError("Could not load bracket data. Please try again later.");
   });
-
-  teamModal = new bootstrap.Modal(document.getElementById("teamModal"));
-
-  refreshBracketFromWinners();
-  renderAll();
 })();

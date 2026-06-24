@@ -8,27 +8,41 @@
   {% load static %}
   <link rel="stylesheet" href="{% static 'bracket/css/bracket.css' %}">
 </head>
-<body class="bracket-page">
-  <div class="container-fluid py-3 px-2 px-lg-4">
+<body class="bracket-page{% if user.is_staff %} admin-edit-mode{% endif %}">
+  <div class="container-fluid bracket-main py-3 px-2 px-lg-4">
     <header class="text-center mb-3">
-      <h1 class="display-5 fw-bold text-uppercase mb-1">World Cup 2026</h1>
-      <p class="text-muted mb-3">Pick your winners — tap a team to advance through the knockout bracket</p>
-      <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
-        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-reset">Reset Bracket</button>
-        <button type="button" class="btn btn-outline-primary btn-sm" id="btn-random">Fill Random Teams</button>
-      </div>
+      <h4 class="fw-bold text-uppercase mb-1">World Cup 2026</h4>
+      {% if user.is_staff %}
+      <p class="text-muted mb-2">Admin edit mode — tap teams to assign or pick winners</p>
+      <p class="mb-3">
+        <span class="badge bg-success">Logged in as admin</span>
+        <a href="{% url 'admin:index' %}" class="btn btn-sm btn-outline-dark ms-2">Django Admin</a>
+      </p>
+      {% else %}
+      <p class="text-muted mb-3">Unofficial World Cup 2026 knockout bracket</p>
+      {% endif %}
     </header>
 
-    <div class="round-labels d-none d-xl-flex">
-      <span>Round of 32</span>
-      <span>Round of 16</span>
-      <span>Quarter Finals</span>
-      <span>Semi Finals</span>
-      <span class="round-label-center">Final</span>
-      <span>Semi Finals</span>
-      <span>Quarter Finals</span>
-      <span>Round of 16</span>
-      <span>Round of 32</span>
+    <div id="bracket-error" class="alert alert-danger d-none text-center" role="alert"></div>
+
+    <div class="round-labels-scroll d-none d-xl-block">
+      <div class="round-labels">
+        <div class="round-labels-half round-labels-left">
+          <span>Ronde 32</span>
+          <span>Ronde 16</span>
+          <span>Kuarter Final</span>
+          <span>Semi Final</span>
+        </div>
+        <div class="round-labels-center">
+          <span class="round-label-final">Final</span>
+        </div>
+        <div class="round-labels-half round-labels-right">
+          <span>Semi Final</span>
+          <span>Kuarter Final</span>
+          <span>Ronde 16</span>
+          <span>Ronde 32</span>
+        </div>
+      </div>
     </div>
 
     <div class="bracket-scroll">
@@ -50,6 +64,16 @@
     </div>
   </div>
 
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <p class="site-footer-title">Kopa Mundial · FIFA World Cup 2026</p>
+      <p class="site-footer-text">
+        &copy; {% now "Y" %} Kopa Mundial — unofficial fan bracket.
+        Made with ⚽ by <a href="https://github.com/marobo" target="_blank">Marobo</a> on <a href="https://github.com/marobo/kopamundial" target="_blank">GitHub</a>.
+      </p>
+    </div>
+  </footer>
+
   <div class="modal fade" id="teamModal" tabindex="-1" aria-labelledby="teamModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable">
       <div class="modal-content">
@@ -65,7 +89,9 @@
     </div>
   </div>
 
-  <script id="teams-data" type="application/json">{{ teams_json|safe }}</script>
+  <script>
+    window.BRACKET_CSRF = "{{ csrf_token }}";
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="{% static 'bracket/js/bracket.js' %}"></script>
 </body>
