@@ -13,6 +13,14 @@
   const RIGHT_ROUNDS = ["sf", "qf", "r16", "r32"];
   const ROUND_COUNTS = { r32: 16, r16: 8, qf: 4, sf: 2, final: 1 };
 
+  const MOBILE_ROUND_ORDER = [
+    { key: "r32", label: "Ronde 32" },
+    { key: "r16", label: "Ronde 16" },
+    { key: "qf", label: "Kuarter Final" },
+    { key: "sf", label: "Semi Final" },
+    { key: "final", label: "Final" },
+  ];
+
   let state = { matches: {} };
   let isStaff = false;
   let teams = [];
@@ -245,11 +253,74 @@
     trophyArea.appendChild(renderMatchCard("final", "final"));
   }
 
-  function renderChampion() {
-    const box = document.getElementById("champion-display");
-    const winner = getWinnerTeam("final");
+  function renderMobileHalf(side, round) {
+    const halfBlock = document.createElement("div");
+    halfBlock.className = `mobile-bracket-half mobile-bracket-${side}`;
 
+    const halfLabel = document.createElement("div");
+    halfLabel.className = "mobile-half-label";
+    halfLabel.textContent = side === "left" ? "Left" : "Right";
+    halfBlock.appendChild(halfLabel);
+
+    const matches = document.createElement("div");
+    matches.className = "mobile-matches";
+
+    const half = ROUND_COUNTS[round] / 2;
+    const offset = side === "left" ? 0 : half;
+    for (let i = 0; i < half; i++) {
+      matches.appendChild(renderMatchCard(`${round}-${offset + i}`, round));
+    }
+
+    halfBlock.appendChild(matches);
+    return halfBlock;
+  }
+
+  function renderMobileList() {
+    const container = document.getElementById("bracket-mobile");
+    if (!container) return;
+
+    container.innerHTML = "";
+
+    const championSection = document.createElement("div");
+    championSection.className = "mobile-champion-section";
+    championSection.innerHTML = `
+      <div class="trophy-icon" aria-hidden="true">🏆</div>
+      <div class="champion-label">Champions</div>
+      <div class="champion-box" id="champion-display-mobile"></div>
+    `;
+    container.appendChild(championSection);
+
+    MOBILE_ROUND_ORDER.forEach(({ key, label }) => {
+      const section = document.createElement("section");
+      section.className = "mobile-round";
+      section.dataset.round = key;
+
+      const heading = document.createElement("h2");
+      heading.className = "mobile-round-title";
+      heading.textContent = label;
+      section.appendChild(heading);
+
+      if (key === "final") {
+        const matches = document.createElement("div");
+        matches.className = "mobile-matches";
+        matches.appendChild(renderMatchCard("final", "final"));
+        section.appendChild(matches);
+      } else {
+        section.appendChild(renderMobileHalf("left", key));
+        section.appendChild(renderMobileHalf("right", key));
+      }
+
+      container.appendChild(section);
+    });
+  }
+
+  function renderChampion(containerId) {
+    const box = document.getElementById(containerId);
+    if (!box) return;
+
+    const winner = getWinnerTeam("final");
     box.innerHTML = "";
+
     if (!winner) {
       box.innerHTML = '<span class="champion-placeholder">?</span>';
       return;
@@ -269,7 +340,9 @@
 
   function renderAll() {
     buildBracketDom();
-    renderChampion();
+    renderMobileList();
+    renderChampion("champion-display");
+    renderChampion("champion-display-mobile");
   }
 
   function openTeamPicker(matchId, slot) {
